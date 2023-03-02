@@ -2,9 +2,10 @@ import datetime
 import pandas as pd
 import boto3
 import os
+from dotenv import load_dotenv
 import streamlit as st
 
-
+load_dotenv()
 client_logs = boto3.client('logs',region_name="us-east-1",
         aws_access_key_id=os.environ.get("LOGS_ACCESS_KEY"),
         aws_secret_access_key=os.environ.get("LOGS_SECRET_KEY"))
