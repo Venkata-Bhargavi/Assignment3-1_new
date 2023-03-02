@@ -5,7 +5,9 @@ import os
 import json
 import requests
 
-from cloudwatch.logs import write_logs, write_api_success_or_failure_logs
+from Authentication.auth_bearer import JWTBearer
+from cloudwatch.logs import write_user_logs, write_api_success_or_failure_logs
+# from cloudwatch.logs import write_logs, write_api_success_or_failure_logs
 from utils_goes_API import get_dir_from_filename_geos
 from sql_utils.sql_goes import fetch_data_from_table_goes
 
@@ -18,7 +20,11 @@ logout_btn = False
 
 
 load_dotenv()
+with open('config.json', 'r') as f:
+    config = json.load(f)
 
+get_goes_files_url = config['endpoints']['get_goes_files']
+get_goes_url_url = config['endpoints']['get_goes_url']
 data_df = fetch_data_from_table_goes()
 
 # """
@@ -54,6 +60,17 @@ if 'logout_btn' not in st.session_state:
     st.session_state.logout_btn = False
 if 'active_user' not in st.session_state:
     st.session_state.active_user = ""
+
+if 'access_token' not in st.session_state:
+    st.session_state.access_token = ""
+
+
+st.markdown(f"Access Token: {st.session_state.access_token}")
+
+st.markdown(f"Payload for token: {JWTBearer.verify_jwt(st.session_state.access_token)}")
+
+headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
+
 def extract_values_from_df(df, key, value, col):
     # Extract the rows where key is equal to value
     filtered_df = df[df[key] == value]
@@ -142,21 +159,28 @@ def goes_enabled():
         # Takes list of files from user selected directory and showing them in selectbox
         # noaa_files_list = return_list(dir_to_check_geos) if dir_to_check_geos != "" else []
 
+
+
+
         # url = 'http://api:8000/get_goes_files'
-        url = 'http://localhost:8001/get_goes_files'
+        url = get_goes_files_url
         data = {
             "year": int(selected_year_geos),
             "day": selected_day_geos,
             "hour": selected_hour_geos
         }
-        write_logs(f"accessed {url}")
-        response = requests.post(url=url, json=data)
+        # write_logs(f"accessed {url}")
+        response = requests.post(url=url, json=data, headers =headers)
         files_list = response.json().get('files')
 
         # response = requests.post(url, data = dir_to_check_geos)
         # files_from_api = response.json()
         # st.markdown(files_from_api['files'])
         selected_file = st.selectbox("Select a file", files_list)
+        write_user_logs(f"{st.session_state.active_user}///{get_goes_files_url}///success")
+        write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user, get_goes_files_url,
+                                          "success", response.status_code)
+
     else:
         st.error("Please select all fields")
 
@@ -187,24 +211,30 @@ def goes_enabled():
     if get_url_btn:
         if ((selected_hour_geos != "Select Hour") and (selected_day_geos != "Select Day") and (selected_year_geos != "Select Year")):
             # get_goes_url = 'http://api:8000/get_goes_url'
-            get_goes_url = 'http://localhost:8001/get_goes_url'
+            get_goes_url = get_goes_url_url
 
             goes_data = {
                 "filename_with_dir":selected_file
             }
-            write_logs(f"accessed {get_goes_url}")
-            response = requests.post(url=get_goes_url, json=goes_data)
+            # write_logs(f"accessed {get_goes_url}")
+
+            jwt_token = "myjwttoken"
+            tk = st.session_state.access_token
+            headers1 = {"Authorization": f"Bearer {tk}"}
+            response = requests.post(url=get_goes_url, json=goes_data, headers=headers1)
             my_s3_file_url = response.json().get('url')
 
             # my_s3_file_url = asyncio.run(goes_copy_file_to_S3_and_return_my_s3_url_Api(selected_file))  #-----for API--------
 
             if my_s3_file_url != "":
-                write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user, get_goes_url, "success", response.status_code)
                 st.success(f"Download link has been generated!\n [URL]({my_s3_file_url})")
                 with st.expander("Expand for URL"):
                     text2 = f"<p style='font-size: 20px; text-align: center'><span style='color: #15b090; font-weight:bold ;'>{my_s3_file_url}</span></p>"
                     st.markdown(f"[{text2}]({my_s3_file_url})", unsafe_allow_html=True)
-                    write_logs("url is generated")
+                    write_user_logs(f"{st.session_state.active_user}///{get_goes_url_url}///success")
+                    write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user,
+                                                      get_goes_url_url,
+                                                      "success", response.status_code)
             else:
                 # logging.DEBUG("File not found in NOAA database")
                 st.error("File not found in NOAA database, Please enter a valid filename!")
@@ -221,7 +251,7 @@ def goes_enabled():
 
     #usign filename
     if button_url:
-        get_goes_url = 'http://localhost:8001/get_goes_url'
+        get_goes_url = get_goes_url_url
         if given_file_name != "":
             full_file_name = get_dir_from_filename_geos(given_file_name)
             if full_file_name != "":
@@ -231,29 +261,27 @@ def goes_enabled():
                 data = {
                     "filename_with_dir": full_file_name
                 }
-                write_logs(f"accessed {get_goes_url}")
-                response = requests.post(url=get_goes_url, json=data)
+                # write_logs(f"accessed {get_goes_url}")
+                tk1 = st.session_state.access_token
+                headers2 = {"Authorization": f"Bearer {tk1}"}
+                response = requests.post(url=get_goes_url, json=data, headers =headers2)
                 my_s3_file_url = response.json().get('url')
                     # displaying url through expander
-                if my_s3_file_url != "":
-                    #writing to cloud watch logs
-                    write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user, get_goes_url, "success",
-                                                      response.status_code)
+                if response.status_code == 200 and my_s3_file_url != "":
                     st.success(f"Download link has been generated!\n [URL]({my_s3_file_url})")
                     with st.expander("Expand for URL"):
                         text2 = f"<p style='font-size: 20px; text-align: center'><span style='color: #15b090; font-weight:bold ;'>{my_s3_file_url}</span></p>"
                         st.markdown(f"[{text2}]({my_s3_file_url})", unsafe_allow_html=True)
-                        write_logs("url is generated")
-                        logging.info("URL has been generated////")
+#-------------------------------write_logs-----------------------------
+                        write_user_logs(f"{st.session_state.active_user}///{get_goes_url_url}///success")
+                        write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user,
+                                                          get_goes_url_url,
+                                                          "success", response.status_code)
                 else:
-                    write_api_success_or_failure_logs("api_failure_logs", st.session_state.active_user, get_goes_url, "failed",
-                                                      response.status_code)
-                    # logging.DEBUG("File not found in NOAA database")
+
                     st.error("File not found in NOAA database, Please enter a valid filename!")
 
             else:
-                write_api_success_or_failure_logs("api_failure_logs", st.session_state.active_user, get_goes_url,
-                                                  "failed","404")
                 st.error("File not found in NOAA database, Please enter a valid filename")
         else:
             st.error("Please Enter a file name")
@@ -285,5 +313,7 @@ else:
 
 if logout_btn:
     st.session_state.authenticated = False
+    st.session_state.access_token = ""
     st.success("User Logged-OUT")
+
     # home_page_layout(st.session_state.authenticated)

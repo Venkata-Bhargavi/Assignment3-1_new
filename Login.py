@@ -2,6 +2,9 @@ import streamlit as st
 import json
 import requests
 from streamlit_lottie import st_lottie
+
+from API import hash_text
+
 # import components.authenticate as authenticate
 
 logout_btn = False
@@ -9,7 +12,10 @@ valid_user_flag = 0
 placeholder = st.empty()
 placeholder_logout = st.empty()
 
+with open('config.json', 'r') as f:
+    config = json.load(f)
 
+login_endpoint = config['endpoints']['login']
 st.markdown(
         "<h3 style='text-align: center'><span style='color: #2A76BE;'>Welcome to Data Exploration Application</span></h3>",
         unsafe_allow_html=True)
@@ -119,16 +125,14 @@ def home_page_layout(auth_session_state_flag):
         with st.form(key="Login"):
             username = st.text_input("Username")
             password = st.text_input("Password", type='password')
-            # Executes FastAPI to check Login
-            # c1, c2,c3 = st.columns(3)
-            # with c1:
-            login_status = st.form_submit_button("Login")
-            # if username == "" or password == "": st.info("Please provide credentials")
-            if login_status and username != "" and password != "":
-                # Validate user credentials by calling the api function passing username and password
-                # valid_user_flag, token = validate_user_credentials(username, password)
 
-                url = "http://127.0.0.1:8001/autheticate_user"
+            login_status = st.form_submit_button("Login")
+
+            if login_status and username != "" and password != "":
+
+                st.markdown(hash_text(password))
+
+                url = login_endpoint
                 data = {
                     # 'email': email,
                     "un": username,
@@ -136,19 +140,22 @@ def home_page_layout(auth_session_state_flag):
                     # 'plan': plan
                 }
                 response = requests.post(url=url, json=data)
+                # st.markdown(f"{response.json()}")
+                st.markdown(response.status_code)
                 st.markdown(response.json())
-                valid_user_flag = response.json().get('matched')
-                token = response.json().get('access_token')
-                st.markdown(f"Token --> {token}")
+                # valid_user_flag = response.json().get('matched')
+                # st.markdown(f"output validate (dbpwd, haswdpwd, pfetch) --> {valid_user_flag}")
+                # token = response.json().get('access_token')
+                # st.markdown(f"Token --> {token}")
         # st.session_state["authenticated"] = False
 
         if username == "" or password == "":
             st.info("Please provide credentials")
-        elif valid_user_flag:
+        elif response.status_code==200 and response.json().get('matched'):
 
             st.markdown(token)
             st.markdown("Success Login!")
-            # st.session_state.access_token = response.json()['access_token']
+            st.session_state.access_token = response.json().get('access_token')
             st.session_state["authenticated"] = True
             st.session_state.active_user = username
             st.success("Logged In - Active User")
@@ -160,7 +167,7 @@ def home_page_layout(auth_session_state_flag):
         else:
             st.session_state["authenticated"] = False
             st.session_state.active_user = ""
-            st.error("Username or password is invalid")
+            st.error("Credentials Not Found")
 
     else:
         st.success("Logged In - Active User")
@@ -185,6 +192,7 @@ def logout_btn_actions():
 
     if logout_btn1:
         st.session_state.authenticated = False
+        st.session_state.access_token = ""
         placeholder_logout.empty()
         # st.success("User Logged-OUT")
         home_page_layout(st.session_state.authenticated)

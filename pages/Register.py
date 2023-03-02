@@ -1,6 +1,12 @@
+import re
+
 import streamlit as st
 import json
 import requests
+
+from API import check_username_doesnot_exists
+from Authentication.authentication import get_password_hash
+from cloudwatch.logs import write_Register_logs
 
 # from cloudwatch.logs import write_user_logs, write_Register_logs
 
@@ -127,28 +133,48 @@ def register_home_page_layout(auth_session_state_flag):
     # Checking any user is authorized / current active user Logged-In, if not it will show logout button
     if not auth_session_state_flag:
         register_url = 'http://127.0.0.1:8001/register_new_user'
+        # Register Form Starts here
         with st.form(key="Register"):
             email = st.text_input("Email")
             username = st.text_input("Username")
             password = st.text_input("Password",type='password')
             plan = st.selectbox("Select your plan", ['free', 'gold', 'platinum'])
             register_status_btn = st.form_submit_button("Register!")
-
+            # If Register button Clicked
             if (username != "" and password != "" and email != "" and plan != "") and register_status_btn:
 
                 input_data = {
                     "email": email,
                     "username": username,
-                    "password": str(password),
+                    "password": password,
                     "plan": str(plan)
                 }
-                response = requests.post(url = register_url,json = input_data)
-                res = response.text
-                if response.status_code == 200:
-                    st.session_state["authenticated"] = False
-                    st.success(res)
+
+                # Define a regular expression to match email addresses
+                email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+                username_unique_flag = check_username_doesnot_exists(username)
+
+                # Validate each email address before inserting it into the table
+                # for row in data:
+                #     email = row[0]
+                if re.match(email_regex, email) and username_unique_flag=="success":
+                    # if email regex match then trigger the api to insert the date into table
+                    response = requests.post(url = register_url,json = input_data)
+                    res = str(response.text)
+                    if response.status_code == 200:
+                        st.session_state["authenticated"] = False
+                        st.success("User Successfully Registered!")
+                        # write_Register_logs(email,username,get_password_hash(password),plan)
+
+                    else:
+                        st.error(f"{response.status_code}")
+
+                elif username_unique_flag != "success":
+                    st.error(f"User Already Exists!")
+
                 else:
-                    st.error(f"{response.status_code}")
+                    st.error("Please Enter Valid Email!")
             else:
                 st.info("Please Provide Valid Credentials")
 
@@ -198,6 +224,7 @@ def logout_btn_actions():
 
     if logout_btn1:
         st.session_state.authenticated = False
+        st.session_state.access_token = ""
         placeholder_logout.empty()
         # st.success("User Logged-OUT")
         register_home_page_layout(st.session_state.authenticated)
