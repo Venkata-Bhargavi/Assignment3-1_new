@@ -8,8 +8,8 @@ import jwt
 from passlib.context import CryptContext
 import streamlit as st
 
-JWT_SECRET = os.environ.get("jwt_secret")
-JWT_ALGORITHM = os.environ.get("jwt_algorithm")
+JWT_SECRET = "secret"
+JWT_ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

@@ -6,15 +6,15 @@ import streamlit as st
 
 
 client_logs = boto3.client('logs',region_name="us-east-1",
-        aws_access_key_id=os.environ.get('key'),
-        aws_secret_access_key=os.environ.get('pwd'))
+        aws_access_key_id=os.environ.get("LOGS_ACCESS_KEY"),
+        aws_secret_access_key=os.environ.get("LOGS_SECRET_KEY"))
 
 
 
-def write_logs (message: str):
+def write_user_logs (message: str):
     client_logs.put_log_events(
-    logGroupName="data_as_a_service",
-    logStreamName="user_logs",
+    logGroupName="data_explorer",
+    logStreamName="user_api_usage",
     logEvents=[{
         'timestamp': int(datetime.datetime.now().timestamp() * 1000),#int(datetime.time.time() * 1e3),
         'message': message
@@ -22,16 +22,14 @@ def write_logs (message: str):
 
 
 def write_api_success_or_failure_logs (logstreamname,username,endpoint,status,code):
-    st.markdown("entered to cloudwatch success")
     client_logs.put_log_events(
-    logGroupName="data_as_a_service",
+    logGroupName="data_explorer",
     logStreamName=logstreamname,
     logEvents=[{
         'timestamp': int(datetime.datetime.now().timestamp() * 1000),
         'message': f"{username}///{endpoint}///{status}///{code}"
 
     }])
-    st.markdown("entered to cloudwatch success ends")
 
 
 
@@ -75,4 +73,4 @@ def read_user_registered_logs():
     return df
 
 if __name__ == "__main__":
-    print(write_logs("sdf"))
+    print(write_user_logs("sdf"))
