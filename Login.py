@@ -3,8 +3,10 @@ import json
 import requests
 from streamlit_lottie import st_lottie
 
-from api_main import hash_text
+from api_main import hash_text, get_plan_for_user
 # import components.authenticate as authenticate
+from cloudwatch.logs import read_register_user_logs, write_loggedin_user_logs
+from api_main import update_user_credentials
 
 logout_btn = False
 valid_user_flag = 0
@@ -58,6 +60,14 @@ if 'active_user' not in st.session_state:
 
 if 'access_token' not in st.session_state:
     st.session_state.access_token = False
+
+if 'user_plan' not in st.session_state:
+    st.session_state.user_plan = False
+
+
+if 'forgot_pwd_btn' not in st.session_state:
+    st.session_state.forgot_pwd_btn = 0
+
 
 valid_user_flag = False
 
@@ -115,10 +125,53 @@ def home_introduction():
     st.markdown("NEXRAD (Next Generation Radar)NEXRAD detects precipitation and atmospheric movement or wind. It returns data which when processed can be displayed in a mosaic map which shows patterns of precipitation and its movement. The radar system operates in two basic modes, selectable by the operator – a slow-scanning clear-air mode for analyzing air movements when there is little or no activity in the area, and a precipitation mode, with a faster scan for tracking active weather.")
 
 
+def return_matched_password(db_password, hashed_password):
+    flag = 0
+    if db_password == hashed_password:
+        flag = 1
+    return flag
+
+
+# def test_verify_user(un, pwd):
+#     df = read_register_user_logs()
+#     db_pwd = df[df.username == un].password[0]
+#     st.markdown(db_pwd[0])
+#     # verify_password(credentials.pwd, db_pwd)
+#     if return_matched_password(db_pwd, hash_text(pwd)):
+#         # return authentication.signJWT(credentials.email)
+#         # st.markdown(f"plan --> {df[df.username == un]['plan']} for {un}")
+#         st.dataframe(df[df.username == un])
+#         # return {"matched": return_matched_password(db_pwd, hash_text(pwd)),
+#         #         'access_token': authentication.signJWT(credentials.un),"plan":df[df.username == credentials.un].plan}
+#     else:
+#         # raise HTTPException(status_code=401, detail='Invalid username or password')
+#         # return {"matched": return_matched_password(db_pwd, hash_text(pwd)), 'access_token': "","plan":""}
+#         st.markdown("Not Found")
+
+df = read_register_user_logs()
+
+def verify_user_cred(username, password):
+    st.markdown(df[df.username==username]['password'][0])
+
+    pwd = (df[df.username==username]['password'][0])
+    hpwd = (hash_text(password))
+
+    st.markdown(f"Checking the match --> {pwd==hpwd}")
+
+    # if compare_hashes(hpwd, pwd):
+    #     st.markdown("User Found")
+
+    # if pwd.equals(hpwd):
+    #     st.markdown("User Found")
+
+
+
 # Function for home page layout
 def home_page_layout(auth_session_state_flag):
     # st.markdown(session_state_flag)
+    st.session_state.forgot_pwd_btn = 0
     token = ""
+    response = ""
     # Checking any user is authorized / current active user Logged-In, if not it will show logout button
     if not auth_session_state_flag:
         with st.form(key="Login"):
@@ -127,42 +180,82 @@ def home_page_layout(auth_session_state_flag):
 
             login_status = st.form_submit_button("Login")
 
+            # col1, col2, col3, col4, col5= st.columns(5)
+            #
+            # with col5:
+            #     forgot_pwd_btn = st.form_submit_button("Forgot Password?")
+
+
             if login_status and username != "" and password != "":
 
-                st.markdown(hash_text(password))
-
-                url = login_endpoint
+                # st.markdown(hash_text(password))
+                # test_verify_user(username, password)
+                url = "http://localhost:8001/autheticate_user"
                 data = {
                     # 'email': email,
                     "un": username,
                     "pwd": password,
                     # 'plan': plan
                 }
+                # r = verify_log_in(username,password)
+                # st.markdown(r)
+                df = read_register_user_logs()
+                # st.dataframe(df)
+                # st.markdown(df.shape)
+                # st.dataframe(df[df.username == username])
+                # st.markdown(hash_text(password))
+                # verify_user_cred(username, password)
+
+
                 response = requests.post(url=url, json=data)
                 # st.markdown(f"{response.json()}")
-                st.markdown(response.status_code)
-                st.markdown(response.json())
-                # valid_user_flag = response.json().get('matched')
-                # st.markdown(f"output validate (dbpwd, haswdpwd, pfetch) --> {valid_user_flag}")
-                # token = response.json().get('access_token')
-                # st.markdown(f"Token --> {token}")
-        # st.session_state["authenticated"] = False
+                # st.markdown(response.status_code)
+                # st.markdown(f"{response.json().get('matched')}---->{response.status_code}")
+
+                if response.status_code == 200 and response.json().get('matched'):
+
+                    # st.markdown(token)
+                    st.markdown(f"Success Login! --> {username}")
+                    user_plan = get_plan_for_user(username)
+                    st.markdown(f"Plan {response.json().get('plan')} --> {response.json().get('access_token')}")
+                    # df = read_register_user_logs()
+                    write_loggedin_user_logs(username, hash_text(password), user_plan)
+                    st.session_state.access_token = response.json().get('access_token')
+                    st.session_state.user_plan = user_plan     #df[df.username == username]["plan"]
+
+                    st.session_state["authenticated"] = True
+                    st.session_state.active_user = username
+                    # st.success("Logged In - Active User")
+                    # st.markdown(f"USER --> {st.session_state.active_user} --> {st.session_state.user_plan} plan")
+            # elif forgot_pwd_btn:
+            #         st.session_state.forgot_pwd_btn = 1
+            else:
+                st.markdown("")
+
+        # if st.session_state.forgot_pwd_btn:
+        #     unr = st.text_input("Username")
+        #     emailr = st.text_input("Email")
+        #     pwdr = st.text_input("New Password", type='password')
+        #     pwdr_btn = st.button('Update Password')
+        #
+        #     password_flag = 0
+        #
+        #     if pwdr_btn:
+        #         password_flag = update_user_credentials(unr, pwdr, emailr)
+        #         st.session_state.forgot_pwd_btn = 0
+        #
+        #     if password_flag:
+        #         st.success("Password Updated Successfully")
+        #     else:
+        #         st.error("Provide valid Credentials")
+
+
 
         if username == "" or password == "":
             st.info("Please provide credentials")
-        elif response.status_code==200 and response.json().get('matched'):
+        elif st.session_state["authenticated"]:
+            st.info("Active USER Found!")
 
-            st.markdown(token)
-            st.markdown("Success Login!")
-            st.session_state.access_token = response.json().get('access_token')
-            st.session_state["authenticated"] = True
-            st.session_state.active_user = username
-            st.success("Logged In - Active User")
-            # placeholder.empty()
-            # logout_btn_actions()
-            # st.session_state.login_status = False
-            # st.session_state.logout_submit = True
-            # login_status.disabled = False
         else:
             st.session_state["authenticated"] = False
             st.session_state.active_user = ""
@@ -177,9 +270,11 @@ def home_page_layout(auth_session_state_flag):
 
         if logout_btn:
             st.session_state.authenticated = False
+            st.session_state.user_plan = ""
             st.session_state.active_user = ""
             # placeholder_logout.empty()
             # st.success("User Logged-OUT")
+
             home_page_layout(st.session_state.authenticated)
 
 def logout_btn_actions():
@@ -192,6 +287,9 @@ def logout_btn_actions():
     if logout_btn1:
         st.session_state.authenticated = False
         st.session_state.access_token = ""
+        st.session_state.valid_user_flag = 0
+        st.session_state.user_plan = ""
+        st.session_state.active_user = ""
         placeholder_logout.empty()
         # st.success("User Logged-OUT")
         home_page_layout(st.session_state.authenticated)
@@ -207,5 +305,27 @@ def logout_btn_actions():
 # with placeholder.container():
 home_page_layout(st.session_state.authenticated)
 
+
+st.markdown("-------------------------------------------------------------------------------------------------")
+
+col1, col2, col3 = st.columns([1,2,1])
+with col2:
+    st.markdown("<h3>Reset Password!</h3>", unsafe_allow_html=True)
+
+unr = st.text_input("Username")
+emailr = st.text_input("Email")
+pwdr = st.text_input("New Password", type='password')
+pwdr_btn = st.button('Update Password')
+
+password_flag = 0
+
+if pwdr_btn:
+    password_flag = update_user_credentials(unr, emailr, hash_text(pwdr))
+    st.session_state.forgot_pwd_btn = 0
+
+if password_flag and unr != "" and emailr != "" and pwdr != "":
+    st.success("Password Updated Successfully")
+else:
+    st.error("Provide valid Credentials")
 
 

@@ -20,7 +20,7 @@ import streamlit as st
 from Authentication import authentication, auth_bearer
 from Authentication.auth_bearer import JWTBearer
 from Authentication.authentication import get_password_hash
-from cloudwatch.logs import write_user_logs, write_Register_logs
+from cloudwatch.logs import *
 
 # from utils_goes_API import goes_get_my_s3_url
 # from utils_nexrad_API import nexrad_get_my_s3_url
@@ -182,8 +182,6 @@ def copy_s3_file_if_exists(src_bucket_name, src_file_name, dst_bucket_name, dst_
             print(
                 f"Object {src_file_name} copied from source bucket {src_bucket_name} to destination bucket {dst_bucket_name}.")
             # now copied so flat = 1
-            write_user_logs(
-                f"Object {src_file_name} copied from source bucket {src_bucket_name} to destination bucket {dst_bucket_name}.")
             flag = 1
         else:
             st.error("No Such File")
@@ -213,7 +211,6 @@ def copy_s3_file(src_bucket_name, src_file_name, dst_bucket_name, dst_file_name)
     except botocore.exceptions.ClientError as e:
         st.markdown("EXCEPTION")
         if e.response['Error']['Code'] == "404":
-            write_user_logs(f"File {src_file_name} not found in source bucket {src_bucket_name}.")
             st.error(f"File {src_file_name} not found in source bucket {src_bucket_name}.")
             # flag = 0
             return 0
@@ -257,7 +254,6 @@ async def goes_copy_file_to_S3_and_return_my_s3_url_Api(selected_file: GoesUserI
         if copied_flag:
             my_s3_file_url = goes_get_my_s3_url(selected_file.filename_with_dir)
         else:
-            write_user_logs("File not found")
             raise HTTPException(status_code=404, detail="File not found")
 
         # return {'url': my_s3_file_url}
@@ -390,16 +386,19 @@ async def verify_user(credentials: CredInputs):
     #     db_pwd = p.fetchall()[0][0]
     #     email = p.fetchall()[0][1]
     #
-    #     # if verify_password1(db_pwd, credentials.pwd) == "true":#verify_password(credentials.pwd, db_pwd):
+    #     st.markdown(f"{db_pwd == hash_text(credentials.pwd)}")
+    #
+    #     if verify_password1(db_pwd, credentials.pwd): #verify_password(credentials.pwd, db_pwd):
     #         # return authentication.signJWT(credentials.email)
-    #         # st.markdown(f"Credentials matched --> Access Token: {authentication.signJWT(email)}")
-    #     return {"matched": verify_password1(db_pwd, credentials.pwd), 'access_token': authentication.signJWT(email)}
+    #         st.markdown(f"Credentials matched --> Access Token: {authentication.signJWT(email)}")
+    #         return {"matched": verify_password1(db_pwd, credentials.pwd), 'access_token': authentication.signJWT(email)}
     #     # else:
     #     #     raise HTTPException(status_code=401, detail='Invalid username and/or password')
     #
     #     # return {"matched":verify_password(credentials.pwd, db_pwd), 'access_token': authentication.signJWT(Cred.email)}
     # except IndexError:
     #     return {"matched": 0, 'access_token': ""}
+    #------------------------------------------------------new logic---------
 
     conn = sqlite3.connect('meta.db')
     c = conn.cursor()
@@ -423,6 +422,29 @@ async def verify_user(credentials: CredInputs):
         return {"matched": 0, 'access_token': ""}
 
 
+    #----------------------------------------------------
+#
+# class CredInputs(BaseModel):
+#     un: str
+#     pwd: str
+#
+#
+# # @app.post("/authenticate_user")
+# def verify_log_in(username,password):
+#     df = read_register_user_logs()
+#     db_pwd = df[df.username == username].password[0]
+#     st.dataframe(df)
+#     # verify_password(credentials.pwd, db_pwd)
+#     if return_matched_password(db_pwd, hash_text(password)):
+#         # return authentication.signJWT(credentials.email)
+#         return {"matched": return_matched_password(db_pwd, hash_text(password)),
+#                 'access_token': authentication.signJWT(username),
+#                 "plan": df[df.username == username].plan[0]}
+#     else:
+#         # raise HTTPException(status_code=401, detail='Invalid username or password')
+#         return {"matched": return_matched_password(db_pwd, hash_text(password)), 'access_token': "", "plan": ""}
+
+
 class RegisterInputs(BaseModel):
     email: str
     username: str
@@ -437,6 +459,17 @@ takes nexrad dir as input and returns all the files in that dir as list
 
 @app.post("/register_new_user")
 async def register_user(Cred: RegisterInputs):
+    # df = read_register_user_logs()
+    # hashed_pwd = hash_text(Cred.password)
+    # if df.shape[0]==0:
+    #     write_register_user_logs(Cred.email, Cred.username, hashed_pwd, Cred.plan)
+    #     return "success"
+    # elif Cred.username not in df.username.unique().tolist():
+    #     write_register_user_logs(Cred.email,Cred.username,hashed_pwd,Cred.plan)
+    #     return "success"
+    # else:
+    #     return "failed"
+    #---------------------------------------------------------
     # Connect to the database (or create it if it doesn't exist)
     conn = sqlite3.connect('meta.db')
 
@@ -473,20 +506,61 @@ async def register_user(Cred: RegisterInputs):
         cursor.execute(insert_data, (Cred.email, Cred.username, hashed_pwd, Cred.plan))
         conn.commit()
         conn.close()
+        write_register_user_logs(Cred.email, Cred.username, hashed_pwd, Cred.plan)
         return "success"
     else:
         return "failed"
 
-
-def check_username_doesnot_exists(username):
+# Update the password
+def update_user_credentials(username, email, new_pwd_hashed):
     conn = sqlite3.connect('meta.db')
+
+    # Create a cursor object to interact with the database
     cursor = conn.cursor()
     tableName = 'registered_user'
 
-    cursor.execute(f"SELECT COUNT(*) FROM {tableName} WHERE username = ?", (username,))
-    count = cursor.fetchone()[0]
+    # Fetch the record based on a condition
+    sql_select_query = f"SELECT * FROM {tableName} WHERE username = '{username}' and email = '{email}'"
+    cursor.execute(sql_select_query)
+    result = cursor.fetchone()
 
-    if count == 0:
+    if result:
+        # Update a particular column of the fetched record
+        sql_update_query = f"UPDATE {tableName} SET password = '{new_pwd_hashed}' WHERE username = '{username}' and email = '{email}'"
+        cursor.execute(sql_update_query)
+        conn.commit()
+        return 1
+    else:
+        return 0
+
+    # Close the cursor and database connection
+    # cursor.close()
+    conn.close()
+
+
+def check_username_doesnot_exists(username):
+    # conn = sqlite3.connect('meta.db')
+    # cursor = conn.cursor()
+    # tableName = 'registered_user'
+    #
+    # cursor.execute(f"SELECT COUNT(*) FROM {tableName} WHERE username = ?", (username,))
+    # count = cursor.fetchone()[0]
+    df = read_register_user_logs()
+
+    if username not in df.username.unique().tolist():
         return "success"
     else:
         return "failed"
+
+
+def get_plan_for_user(username):
+    conn = sqlite3.connect('meta.db')
+    c = conn.cursor()
+
+    query = f"SELECT plan FROM registered_user  WHERE username = '{username}'"
+
+
+    p = c.execute(query)
+    db_plan = p.fetchall()[0][0]
+
+    return db_plan

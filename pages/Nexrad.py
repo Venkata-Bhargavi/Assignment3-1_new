@@ -5,19 +5,13 @@ import requests
 import streamlit as st
 import logging
 import folium
-
 from cloudwatch.logs import *
-# from Login import active_user
-
-# from cloudwatch.logs import write_logs, write_api_success_or_failure_logs
-# from aws_nexrad import get_files_from_nexrad_bucket, get_noaa_nexrad_url, copy_s3_nexrad_file, get_my_s3_url_nex, \
-#     get_dir_from_filename_nexrad, copy_file_to_S3_and_return_my_s3_url
-# from aws_nexrad import get_dir_from_filename_nexrad, get_files_from_nexrad_bucket, get_noaa_nexrad_url
 from sql_utils.sql_nexrad import fetch_data_from_table_nexrad
-# from aws_geos import get_files_from_noaa_bucket, get_noaa_geos_url, copy_s3_file, get_my_s3_url, \
-#     get_dir_from_filename_geos
 from streamlit_folium import folium_static
 from utils_nexrad_API import get_dir_from_filename_nexrad
+from datetime import datetime, timedelta
+from Authentication.utils import check_user_usage_limit_within_lasthour
+
 
 path = os.path.dirname(__file__)
 from dotenv import load_dotenv
@@ -30,6 +24,14 @@ with open('config.json', 'r') as f:
 
 get_nexrad_files_url = config['endpoints']['get_nexrad_files']
 get_nexrad_url_url = config['endpoints']['get_nexrad_url']
+
+
+# st.markdown("Checking api df")
+
+
+
+    # st.markdown(f"{api_usage_df.shape}")
+# api_usage_df.endpoint
 
 if 'login_status' not in st.session_state:
     st.session_state.login_status = False
@@ -65,7 +67,16 @@ if 'active_user' not in st.session_state:
 if 'access_token' not in st.session_state:
     st.session_state.access_token = ""
 
+if 'user_plan' not in st.session_state:
+    st.session_state.user_plan = ""
+
 headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
+
+
+# Triggers limit and nex rad url
+if st.session_state.authenticated == True:
+    max_triggers = config['plans'][f"{st.session_state.user_plan}"]
+    user_triggers = check_user_usage_limit_within_lasthour(st.session_state.active_user, get_nexrad_url_url)
 
 
 # """
@@ -141,6 +152,7 @@ def nexrad_enabled():
         station = st.selectbox("Station Code",scshl)
         selected_station_nexrad = station
 
+    # Files pulling
 
     # if st.button("Retreive"):
     dir_to_check_nexrad = ""
@@ -165,7 +177,7 @@ def nexrad_enabled():
             # st.markdown(files_from_api['files'])
             selected_file = st.selectbox("Select a file", noaa_files_list)
             #--------------------------writing_logs--------------------------------------
-            write_user_logs(f"{st.session_state.active_user}///{get_nexrad_files_url}///success")
+            write_user_api_usage(st.session_state.active_user,get_nexrad_files_url,"success")
             write_api_success_or_failure_logs("api_success_logs",st.session_state.active_user,get_nexrad_files_url,"success",response.status_code)
     else:
         st.error("Please select all fields")
@@ -176,41 +188,43 @@ def nexrad_enabled():
     get_url_btn = st.button("Get Url")
     my_s3_file_url = ""
 
+    # URL Generating
 
     #through user dropdown inputs
     if get_url_btn:
         get_nexrad_url = get_nexrad_url_url
         if((selected_year_nexrad != "Select Year") and (selected_month_nexrad != "Select Month") and (selected_day_nexrad != "Select Day") and (selected_station_nexrad != "Select station")):
+            if (int(user_triggers) < max_triggers):
+                nexrad_data = {
+                    "filename_with_dir": selected_file
+                }
+                # write_logs(f"accessed {get_nexrad_url}")
+                num_retries = 3
+                tk = st.session_state.access_token
+                headers1 = {"Authorization": f"Bearer {tk}"}
+                for i in range(num_retries):
+                    response = requests.post(url=get_nexrad_url, json=nexrad_data, headers =headers1)
+                    my_s3_file_url = response.json().get('url')
+                    if my_s3_file_url != "":
+                        break
 
-            nexrad_data = {
-                "filename_with_dir": selected_file
-            }
-            # write_logs(f"accessed {get_nexrad_url}")
-            num_retries = 3
-            tk = st.session_state.access_token
-            headers1 = {"Authorization": f"Bearer {tk}"}
-            for i in range(num_retries):
-                response = requests.post(url=get_nexrad_url, json=nexrad_data, headers =headers1)
-                my_s3_file_url = response.json().get('url')
                 if my_s3_file_url != "":
-                    break
+                    # write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user, get_nexrad_url, "success", response.status_code)
+                    st.success(f"Download link has been generated!\n [URL]({my_s3_file_url})")
+                    with st.expander("Expand for URL"):
+                        text2 = f"<p style='font-size: 20px; text-align: center'><span style='color: #15b090; font-weight:bold ;'>{my_s3_file_url}</span></p>"
+                        st.markdown(f"[{text2}]({my_s3_file_url})", unsafe_allow_html=True)
+                        logging.info("URL has been generated")
+                        #-----------------------writing_logs-----------------------------
+                        write_user_api_usage(st.session_state.active_user,get_nexrad_url_url,"success")
+                        write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user,
+                                                          get_nexrad_url, "success", response.status_code)
 
-            if my_s3_file_url != "":
-                # write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user, get_nexrad_url, "success", response.status_code)
-                st.success(f"Download link has been generated!\n [URL]({my_s3_file_url})")
-                with st.expander("Expand for URL"):
-                    text2 = f"<p style='font-size: 20px; text-align: center'><span style='color: #15b090; font-weight:bold ;'>{my_s3_file_url}</span></p>"
-                    st.markdown(f"[{text2}]({my_s3_file_url})", unsafe_allow_html=True)
-                    logging.info("URL has been generated")
-                    #-----------------------writing_logs-----------------------------
-                    write_user_logs(f"{st.session_state.active_user}///{get_nexrad_url_url}///success")
-                    write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user,
-                                                      get_nexrad_url, "success", response.status_code)
-
-
-
+                else:
+                    st.error("File not found in NEXRAD Dataset, Please enter a valid filename")
             else:
-                st.error("File not found in NEXRAD Dataset, Please enter a valid filename")
+                st.error("Usage Limit Exceeded")
+
         else:
             st.error("Please select all fields!")
 
@@ -225,51 +239,57 @@ def nexrad_enabled():
 
     # through file input
     if button_url:
-        if given_file_name != "":
-            src_bucket = "noaa-nexrad-level2"
-            des_bucket = "damg7245-ass1"
 
-            #generating filename with dir structure
-            full_file_name = get_dir_from_filename_nexrad(given_file_name)
+        get_nexrad_url = get_nexrad_url_url
 
-            # get_nexrad_url = 'http://api:8000/get_nexrad_url'
-            get_nexrad_url = get_nexrad_url_url
+        if (int(user_triggers) < max_triggers):
+            if given_file_name != "":
+                src_bucket = "noaa-nexrad-level2"
+                des_bucket = "damg7245-ass1"
 
-            nexrad_data = {
-                "filename_with_dir": full_file_name
-            }
-            # write_logs(f"accessed {get_nexrad_url}")
-            tk2 = st.session_state.access_token
-            headers2 = {"Authorization": f"Bearer {tk2}"}
-            response = requests.post(url=get_nexrad_url, json=nexrad_data, headers =headers2)
-            # try:
-            my_s3_file_url = response.json().get('url')
-            st.markdown(my_s3_file_url)
-            # except json.JSONDecodeError as e:
-            #     st.error(f"Error decoding JSON:, {e}")
-            # except Exception as e:
-            #     st.error(f"Error:, {e}")
+                #generating filename with dir structure
+                full_file_name = get_dir_from_filename_nexrad(given_file_name)
 
-            # st.markdown(my_s3_file_url)
+                # get_nexrad_url = 'http://api:8000/get_nexrad_url'
+                get_nexrad_url = get_nexrad_url_url
 
-            if my_s3_file_url != None:  #checks if the file url is not empty
-                st.success(f"Download link has been generated!\n [URL]({my_s3_file_url})")
-                logging.info("Download link generated")
+                nexrad_data = {
+                    "filename_with_dir": full_file_name
+                }
+                # write_logs(f"accessed {get_nexrad_url}")
+                tk2 = st.session_state.access_token
+                headers2 = {"Authorization": f"Bearer {tk2}"}
+                response = requests.post(url=get_nexrad_url, json=nexrad_data, headers =headers2)
+                # try:
+                my_s3_file_url = response.json().get('url')
+                st.markdown(my_s3_file_url)
+                # except json.JSONDecodeError as e:
+                #     st.error(f"Error decoding JSON:, {e}")
+                # except Exception as e:
+                #     st.error(f"Error:, {e}")
 
-                # displaying url through expander
-                with st.expander("Expand for URL"):
-                    text2 = f"<p style='font-size: 20px; text-align: center'><span style='color: #15b090; font-weight:bold ;'>{my_s3_file_url}</span></p>"
-                    st.markdown(f"[{text2}]({my_s3_file_url})", unsafe_allow_html=True)
+                # st.markdown(my_s3_file_url)
 
-                    logging.info("URL has been generated")
-                    write_user_logs(f"{st.session_state.active_user}///{get_nexrad_url_url}///success")
-                    write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user,
-                                                      get_nexrad_url, "success", response.status_code)
+                if my_s3_file_url != None:  #checks if the file url is not empty
+                    st.success(f"Download link has been generated!\n [URL]({my_s3_file_url})")
+                    logging.info("Download link generated")
+
+                    # displaying url through expander
+                    with st.expander("Expand for URL"):
+                        text2 = f"<p style='font-size: 20px; text-align: center'><span style='color: #15b090; font-weight:bold ;'>{my_s3_file_url}</span></p>"
+                        st.markdown(f"[{text2}]({my_s3_file_url})", unsafe_allow_html=True)
+
+                        logging.info("URL has been generated")
+                        write_user_api_usage(st.session_state.active_user,get_nexrad_url_url,"success")
+                        write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user,
+                                                          get_nexrad_url, "success", response.status_code)
+                else:
+                    st.error("File not found in NEXRAD Dataset, Please enter a valid filename")
+
             else:
-                st.error("File not found in NEXRAD Dataset, Please enter a valid filename")
-
+                st.error("Please Enter a file name")
         else:
-            st.error("Please Enter a file name")
+            st.error("Usage Limit Exceeded")
 
 
 
@@ -308,8 +328,11 @@ else:
 
 if logout_btn:
     active_user = ""
+    st.session_state.valid_user_flag = 0
     st.session_state.authenticated = False
     st.session_state.access_token = ""
+    st.session_state.user_plan = ""
+    st.session_state.active_user = ""
     st.success("User Logged-OUT")
     # home_page_layout(st.session_state.authenticated)
 
