@@ -1,0 +1,11 @@
+[2023-03-03T15:27:25.736+0000] {taskinstance.py:1083} INFO - Dependencies all met for <TaskInstance: metadata_scraper.scrape_goes_data manual__2023-03-03T15:27:10.977441+00:00 [queued]>
+[2023-03-03T15:27:25.996+0000] {taskinstance.py:1083} INFO - Dependencies all met for <TaskInstance: metadata_scraper.scrape_goes_data manual__2023-03-03T15:27:10.977441+00:00 [queued]>
+[2023-03-03T15:27:26.001+0000] {taskinstance.py:1279} INFO - 
+--------------------------------------------------------------------------------
+[2023-03-03T15:27:26.003+0000] {taskinstance.py:1280} INFO - Starting attempt 1 of 1
+[2023-03-03T15:27:26.005+0000] {taskinstance.py:1281} INFO - 
+--------------------------------------------------------------------------------
+[2023-03-03T15:27:26.071+0000] {taskinstance.py:1300} INFO - Executing <Task(PythonOperator): scrape_goes_data> on 2023-03-03 15:27:10.977441+00:00
+[2023-03-03T15:27:26.201+0000] {standard_task_runner.py:55} INFO - Started process 286 to run task
+[2023-03-03T15:27:27.829+0000] {standard_task_runner.py:82} INFO - Running: ['***', 'tasks', 'run', 'metadata_scraper', 'scrape_goes_data', 'manual__2023-03-03T15:27:10.977441+00:00', '--job-id', '10', '--raw', '--subdir', 'DAGS_FOLDER/scrapper.py', '--cfg-path', '/tmp/tmpcle_2ihl']
+[2023-03-03T15:27:28.461+0000] {standard_task_runner.py:83} INFO - Job 10: Subtask scrape_goes_data
