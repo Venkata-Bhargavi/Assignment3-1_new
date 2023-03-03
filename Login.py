@@ -3,8 +3,7 @@ import json
 import requests
 from streamlit_lottie import st_lottie
 
-from API import hash_text
-
+from api_main import hash_text
 # import components.authenticate as authenticate
 
 logout_btn = False

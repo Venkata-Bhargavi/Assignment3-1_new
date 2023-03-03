@@ -6,8 +6,11 @@ RUN pip install --upgrade pip
 
 WORKDIR /app
 # Change working dir to app
+COPY Authentication /app/Authetication
 
-COPY ./requirements.txt ./meta.db ../API.py /app/
+COPY cloudwatch /app/cloudwatch
+COPY ./requirements.txt ./meta.db ../api_main.py /app/
+COPY ./config.json /app/
 
 #COPY ../sql_util /app/sql_util
 
@@ -22,6 +25,6 @@ EXPOSE 8000
 
 #CMD ["uvicorn","API:app","--host","0.0.0.0"]
 # Start the FastAPI server with Gunicorn
-CMD ["gunicorn" ,"-w", "4", "-k", "uvicorn.workers.UvicornWorker" , "--bind", "0.0.0.0:8000", "API:app"]
+CMD ["gunicorn" ,"-w", "4", "-k", "uvicorn.workers.UvicornWorker" , "--bind", "0.0.0.0:8000", "api_main:app"]
 
 #CMD ["uvicorn", "API:app", "--host", "0.0.0.0", "--port", "8091"]
