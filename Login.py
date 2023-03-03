@@ -151,12 +151,12 @@ def return_matched_password(db_password, hashed_password):
 df = read_register_user_logs()
 
 def verify_user_cred(username, password):
-    st.markdown(df[df.username==username]['password'][0])
+    # st.markdown(df[df.username==username]['password'][0])
 
     pwd = (df[df.username==username]['password'][0])
     hpwd = (hash_text(password))
 
-    st.markdown(f"Checking the match --> {pwd==hpwd}")
+    # st.markdown(f"Checking the match --> {pwd==hpwd}")
 
     # if compare_hashes(hpwd, pwd):
     #     st.markdown("User Found")
@@ -215,9 +215,9 @@ def home_page_layout(auth_session_state_flag):
                 if response.status_code == 200 and response.json().get('matched'):
 
                     # st.markdown(token)
-                    st.markdown(f"Success Login! --> {username}")
+                    st.markdown(f"Success Login!")
                     user_plan = get_plan_for_user(username)
-                    st.markdown(f"Plan {response.json().get('plan')} --> {response.json().get('access_token')}")
+                    # st.markdown(f"Plan {response.json().get('plan')} --> {response.json().get('access_token')}")
                     # df = read_register_user_logs()
                     write_loggedin_user_logs(username, hash_text(password), user_plan)
                     st.session_state.access_token = response.json().get('access_token')
