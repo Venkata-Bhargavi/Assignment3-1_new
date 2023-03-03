@@ -4,7 +4,7 @@ import streamlit as st
 import json
 import requests
 
-from API import check_username_doesnot_exists
+from api_main import check_username_doesnot_exists
 from Authentication.authentication import get_password_hash
 from cloudwatch.logs import write_Register_logs
 

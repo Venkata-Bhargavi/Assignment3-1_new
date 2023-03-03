@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from API import app
+from api_main import app
 
 client = TestClient(app)
 def test_nexrad_url():

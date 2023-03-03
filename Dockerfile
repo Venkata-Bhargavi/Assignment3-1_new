@@ -6,7 +6,15 @@ COPY ./Login.py ./requirements.txt  /app/
 
 COPY pages /app/pages
 
-COPY sql_utils/sql_credentials.py ./sql_goes.py ./sql_nexrad.py ./utils_goes_API.py ./utils_nexrad_API.py /app/
+COPY sql_utils /app/sql_utils
+
+COPY ./api_main.py /app/
+COPY ./config.json /app/
+COPY service_plans /app/
+
+COPY cloudwatch /app/cloudwatch
+
+COPY Authentication /app/Authentication
 
 COPY ./lat_long.py ./meta.db ./nexrad.csv /app/
 
