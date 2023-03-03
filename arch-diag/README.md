@@ -13,7 +13,9 @@ Graphviz
 sudo apt install graphviz
 ```
 
-Diagrams - inside virtual environment
+Diagrams -
+Create virtual environment and activate it.
+inside virtual environment
 
 ```bash
 pip install diagrams
@@ -28,16 +30,16 @@ pip install diagrams
    - Cluster - Cluster allows you group (or clustering) the nodes in an isolated group.
    - Edges - Edge is representing an edge between Nodes.
 
-2. Create a python script [diagram.py](diagram.py)
+2. Create a python script [arch3.py](arch3.py)
 
 3. Generate the image
 
    ```bash
-   python diagram.py
+   python arch3.py
    ```
    
  The image gets generated in the current working directory(arch-diag)
  
-   <!-- <imag src="architecture_diagram.png" width="300" height="300" /> -->
+   <!-- <imag src="cloud_architecture_diagram.png" width="300" height="300" /> -->
  
-   ![image](architecture_diagram.png)
+   ![image](cloud_architecture_diagram.png)

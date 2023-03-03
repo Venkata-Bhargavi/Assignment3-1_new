@@ -1,4 +1,4 @@
-# Assignment 2 - Code Advancements to Goes-Nexrad Streamlit Application
+# Assignment 3- Code Enhancement
 
 User Guide - <a href="https://codelabs-preview.appspot.com/?file_id=1WuXZUl3ZoBxxDY33n4CoS1PDx_Qhr2KuQ16byUmUeMc#8">Assignment 3 - User Guide</a>
 
@@ -7,21 +7,15 @@ User Guide - <a href="https://codelabs-preview.appspot.com/?file_id=1WuXZUl3ZoBx
 
 In this repository, we are going to add functionality to the existing Goes-Nexrad Streamlit Application from Assignment 1.
 The following changes have been incorporated to enhance the Application reusability.
-* 1.Fast API : 
-  * Authentication : 
-   Documentation: https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/?h=jwtLinks 
-  
-  * Docker:
-   * Documentation: https://fastapi.tiangolo.com/deployment/docker/Links 
-  
-  * Great Expectation:
-   * Documentation : https://docs.greatexpectations.io/docs/deployment_patterns/how_to_use_gx_with_aws/how_to_use_gx_with_aws_using_cloud_storage_and_pandas/
-   * Documentation : https://docs.greatexpectations.io/docs/deployment_patterns/how_to_use_great_expectations_with_airflow/
-  
-  * Airflow: 
-   * Documentation: https://airflow.apache.org/docs/
+* 1. Fast API : 
 
-  Great Expectation hosted on s3 bucket : http://data-great-expect.s3-website-us-east-1.amazonaws.com
+* 2. Docker:
+  
+* 3. Great Expectation:
+     1. Great Expectation hosted on s3 bucket : http://data-great-expect.s3-website-us-east-1.amazonaws.com
+
+* 4. Airflow: 
+
 
 
 <h3> Flow of Data</h3>
@@ -59,6 +53,8 @@ Following are the stacks used to build this project
 6. Docker to containerize the entire application
 7. Great Expectation 
 8. Airflow to build workflows connecting virtually any technology
+9. Cloud Hosting
+10. Architecture diagram for Cloud
 
 <h3> Steps to run this project </h3>
 
@@ -66,7 +62,7 @@ Following are the stacks used to build this project
 2. Change to the location where you want to copy the repository
 3. Copy and paste the following command, and press enter
 ```bash
-     https://github.com/BigDataIA-Spring2023-Team-11/Assignment2.git
+   https://github.com/BigDataIA-Spring2023-Team-11/Assignment3.git
 ```
 4.Run the following to install the requirements file.
 ```bash
