@@ -1,10 +1,11 @@
 {
   "endpoints": {
-    "login": "http://api:8000/autheticate_user",
-    "get_nexrad_files": "http://api:8000/get_nexrad_files",
-    "get_nexrad_url": "http://api:8000/get_nexrad_url",
-    "get_goes_files": "http://api:8000/get_goes_files",
-    "get_goes_url": "http://api:8000/get_goes_url"
+    "login": "http://localhost:8001/verify_user",
+    "get_nexrad_files": "http://127.0.0.1:8001/get_nexrad_files",
+    "get_nexrad_url": "http://127.0.0.1:8001/get_nexrad_url",
+    "get_goes_files": "http://127.0.0.1:8001/get_goes_files",
+    "get_goes_url": "http://127.0.0.1:8001/get_goes_url",
+    "register_user": "http://127.0.0.1:8001/register_new_user"
   },
   "plans": {
     "free": 10,

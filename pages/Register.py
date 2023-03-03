@@ -5,10 +5,9 @@ import json
 import requests
 
 from api_main import check_username_doesnot_exists
-from Authentication.authentication import get_password_hash
-from cloudwatch.logs import write_Register_logs
 
-# from cloudwatch.logs import write_user_logs, write_Register_logs
+
+from cloudwatch.logs import *
 
 # import components.authenticate as authenticate
 
@@ -16,7 +15,10 @@ logout_btn = False
 valid_user_flag = 0
 placeholder = st.empty()
 placeholder_logout = st.empty()
+with open('config.json', 'r') as f:
+    config = json.load(f)
 
+register_user_url = config['endpoints']['register_user']
 
 st.markdown(
         "<h3 style='text-align: center'><span style='color: #2A76BE;'>Welcome to Data Exploration Application</span></h3>",
@@ -53,21 +55,23 @@ if 'valid_user_flag' not in st.session_state:
 if 'logout_btn' not in st.session_state:
     st.session_state.logout_btn = False
 
+if 'user_plan' not in st.session_state:
+    st.session_state.user_plan = ""
 
 
 valid_user_flag = False
 
-def validate_user_credentials(username, password):
-
-    # url = 'http://api:8000/autheticate_user'
-    url = "http://127.0.0.1:8001/autheticate_user"
-    data = {
-        "un": username,
-        "pwd": password
-    }
-    response = requests.post(url=url, json=data)
-    valid_user_flag = response.json().get('matched')
-    return valid_user_flag
+# def validate_user_credentials(username, password):
+#
+#     # url = 'http://api:8000/autheticate_user'
+#     url = "http://127.0.0.1:8001/autheticate_user"
+#     data = {
+#         "un": username,
+#         "pwd": password
+#     }
+#     response = requests.post(url=url, json=data)
+#     valid_user_flag = response.json().get('matched')
+#     return valid_user_flag
 
 # def registerUserCredentials(email, username, password, plan):
 #
@@ -125,14 +129,15 @@ def home_introduction():
     st.markdown("")
     st.markdown("NEXRAD (Next Generation Radar)NEXRAD detects precipitation and atmospheric movement or wind. It returns data which when processed can be displayed in a mosaic map which shows patterns of precipitation and its movement. The radar system operates in two basic modes, selectable by the operator – a slow-scanning clear-air mode for analyzing air movements when there is little or no activity in the area, and a precipitation mode, with a faster scan for tracking active weather.")
 
-
+df = read_register_user_logs()
+# st.markdown(f"{df.head()} --> {df.shape}")
 # Function for home page layout
 def register_home_page_layout(auth_session_state_flag):
     #st.markdown(session_state_flag)
 
     # Checking any user is authorized / current active user Logged-In, if not it will show logout button
     if not auth_session_state_flag:
-        register_url = 'http://127.0.0.1:8001/register_new_user'
+        register_url = register_user_url
         # Register Form Starts here
         with st.form(key="Register"):
             email = st.text_input("Email")
@@ -150,11 +155,17 @@ def register_home_page_layout(auth_session_state_flag):
                     "plan": str(plan)
                 }
 
+
                 # Define a regular expression to match email addresses
                 email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 
-                username_unique_flag = check_username_doesnot_exists(username)
+                df_new = read_register_user_logs()
 
+                # st.markdown(f"DF --> {df_new}")
+
+
+                username_unique_flag = check_username_doesnot_exists(username)
+                # st.markdown(f"USERNAME Unique --> {username_unique_flag}")
                 # Validate each email address before inserting it into the table
                 # for row in data:
                 #     email = row[0]
@@ -165,8 +176,8 @@ def register_home_page_layout(auth_session_state_flag):
                     if response.status_code == 200:
                         st.session_state["authenticated"] = False
                         st.success("User Successfully Registered!")
-                        # write_Register_logs(email,username,get_password_hash(password),plan)
 
+                        # write_register_user_logs(email,username,password,plan)
                     else:
                         st.error(f"{response.status_code}")
 
