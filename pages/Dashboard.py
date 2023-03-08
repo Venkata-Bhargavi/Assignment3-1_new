@@ -59,17 +59,17 @@ df['date'] = pd.to_datetime(df['timestamp']).dt.date
 def total_req_by_user(user):
     user_df = df[df.username == user].copy()
     # group by username and date, and count the number of requests
-    result = user_df.groupby('date')['endpoint'].count().reset_index(name='count')
-    # user_df.groupby(['username', 'date']).size().reset_index(name='count')
-
-    # st.dataframe(result)
-
-    # group by date and count the number of requests
-    user_df1 = user_df.groupby('date')['endpoint'].count().reset_index(name='count')
+    # result = user_df.groupby('date')['endpoint'].count().reset_index(name='count')
+    # # user_df.groupby(['username', 'date']).size().reset_index(name='count')
+    #
+    # # st.dataframe(result)
+    #
+    # # group by date and count the number of requests
+    # user_df1 = user_df.groupby('date')['endpoint'].count().reset_index(name='count')
 
     # user_df.date.value_counts()
 
-    vc = df['date'].value_counts()
+    vc = df[df.username == user]['date'].value_counts()
 
     # convert the value counts to a dataframe
     df_vc = vc.to_frame().reset_index()
@@ -100,7 +100,7 @@ def total_api_calls_yesterday(user):
     yesterday = yesterday.date()
 
     # Filter dataframe to only include data from yesterday
-    df_yesterday = df[(df['timestamp'].dt.date == yesterday)].copy()
+    df_yesterday = df[(df.username == user) & (df['timestamp'].dt.date == yesterday)].copy()
     st.markdown("")
     st.info(f"Total API Calls Previous Day: {df_yesterday.shape[0]}")
 
@@ -120,7 +120,7 @@ def total_api_calls_last_week(user):
     start_date = end_date - timedelta(days=7)
 
     # Filter dataframe to only include data from the last week
-    df_last_week = df[(df['timestamp'].dt.date >= start_date) & (df['timestamp'].dt.date <= end_date)].copy()
+    df_last_week = df[(df.username==user) & (df['timestamp'].dt.date >= start_date) & (df['timestamp'].dt.date <= end_date)].copy()
     st.markdown("")
     st.info(f"Total API Calls Last Week: {df_last_week.shape[0]}")
 
@@ -134,13 +134,13 @@ def total_api_calls_last_week(user):
         st.bar_chart(value_counts)
 
 # 5. Total API calls by Endpoint
-def total_api_calls_by_endpoint():
+def total_api_calls_by_endpoint(user):
     # result = df.groupby('endpoint').count().reset_index()
     # requests_by_endpoint = df.groupby('endpoint').size().reset_index(name='total_requests')
 
-    count = df.endpoint.value_counts().values[0] if df.shape[0] > 0 else 0
+    # count = df.endpoint.value_counts().values[0] if df.shape[0] > 0 else 0
 
-    vc = df['endpoint'].value_counts()
+    vc = df[df.username == user]['endpoint'].value_counts()
 
     # convert the value counts to a dataframe
     df_vc = vc.to_frame().reset_index()
@@ -158,42 +158,48 @@ def total_api_calls_by_endpoint():
         value_counts = df_vc['endpoint'].value_counts()
 
         # create bar chart using streamlit
-        st.bar_chart(value_counts)
+        st.bar_chart(df_vc, x='endpoint', y='count')
 
     # st.dataframe(df)
 
     # st.markdown(df.endpoint.value_counts())
 
-def total_api_calls_success():
+def total_api_calls_success(user):
     df = fetch_api_success_logs_for_5_days()
 
-    st.info(f"Total Success API Calls: {df.status.value_counts().values[0]}")
-    df['endpoint'] = df['endpoint'].apply(lambda x: x.split('/')[-1])
+    if df[df.username==user].shape[0] > 0:
+        df = df[df.username == user]
+        #
+        st.info(f"Total Success API Calls: {df.status.value_counts().values[0]}")
+        df['endpoint'] = df[df.username == user]['endpoint'].apply(lambda x: x.split('/')[-1])
 
-    if df.shape[0]>0:
-        st.dataframe(df)
-        value_counts = df['endpoint'].value_counts()
+        if df.shape[0]>0:
+            st.dataframe(df)
+            value_counts = df['endpoint'].value_counts()
 
-        # create bar chart using streamlit
-        st.bar_chart(value_counts)
+            # create bar chart using streamlit
+            st.bar_chart(value_counts)
 
-        # display value counts as a table
-        # st.write(value_counts)
+            # display value counts as a table
+            # st.write(value_counts)
 
-    # st.markdown()
+        # st.markdown()
+    else:
+        st.info(f"Total Success API Calls: 0")
 
 
-def total_api_calls_failure():
+
+def total_api_calls_failure(user):
     df = fetch_api_failed_logs_for_5_days()
-
-    count = df.status.value_counts().values[0] if df.shape[0] > 0 else 0
+    df = df[df.username == user]
+    count = df[df.username == user].status.value_counts().values[0] if df.shape[0] > 0 else 0
     st.info(f"Total Failed API Calls: {count}")
     df['endpoint'] = df['endpoint'].apply(lambda x: x.split('/')[-1])
 
     if count:
         st.dataframe(df)
         # get value counts of column
-        value_counts = df['endpoint'].value_counts()
+        value_counts = df[df.username == user]['endpoint'].value_counts()
 
         # create bar chart using streamlit
         st.bar_chart(value_counts)
@@ -223,11 +229,11 @@ def admin_dashboard_home_page_layout(auth_session_state_flag):
     total_api_calls_last_week(user)
 
 #     4. Success/Failure API calls
-    total_api_calls_success()
-    total_api_calls_failure()
+    total_api_calls_success(user)
+    total_api_calls_failure(user)
 
 #     5. Total APi calls by Each Endpoint
-    total_api_calls_by_endpoint()
+    total_api_calls_by_endpoint(user)
 
 
 def user_dashboard_home_page_layout(auth_session_state_flag, username):
@@ -247,11 +253,11 @@ def user_dashboard_home_page_layout(auth_session_state_flag, username):
     total_api_calls_last_week(username)
 
 #     4. Success/Failure API calls
-    total_api_calls_success()
-    total_api_calls_failure()
+    total_api_calls_success(username)
+    total_api_calls_failure(username)
 
 #     5. Total APi calls by Each Endpoint
-    total_api_calls_by_endpoint()
+    total_api_calls_by_endpoint(username)
 
 
 def logout_btn_actions():

@@ -197,7 +197,6 @@ def write_loggedin_user_logs(username,password,plan):
 
 #-----------------------------------reading logs--------------------------
 
-
 def read_user_api_usage_logs():
 
     # Specify the log group and log stream names

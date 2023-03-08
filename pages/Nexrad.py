@@ -178,7 +178,9 @@ def nexrad_enabled():
             selected_file = st.selectbox("Select a file", noaa_files_list)
             #--------------------------writing_logs--------------------------------------
             write_user_api_usage(st.session_state.active_user,get_nexrad_files_url,"success")
+
             write_api_success_or_failure_logs("api_success_logs",st.session_state.active_user,get_nexrad_files_url,"success",response.status_code)
+            st.info(f"You are left with {max_triggers - user_triggers} API triggers")
     else:
         st.error("Please select all fields")
 
@@ -199,7 +201,7 @@ def nexrad_enabled():
                     "filename_with_dir": selected_file
                 }
                 # write_logs(f"accessed {get_nexrad_url}")
-                num_retries = 3
+                num_retries = 1
                 tk = st.session_state.access_token
                 headers1 = {"Authorization": f"Bearer {tk}"}
                 for i in range(num_retries):
