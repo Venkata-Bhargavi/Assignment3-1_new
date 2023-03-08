@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "login": "http://localhost:8000/verify_user",
+    "login": "http://localhost:8000/autheticate_user",
     "get_nexrad_files": "http://localhost:8000/get_nexrad_files",
     "get_nexrad_url": "http://localhost:8000/get_nexrad_url",
     "get_goes_files": "http://localhost:8000/get_goes_files",

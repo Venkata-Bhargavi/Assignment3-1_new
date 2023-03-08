@@ -190,7 +190,7 @@ def home_page_layout(auth_session_state_flag):
 
                 # st.markdown(hash_text(password))
                 # test_verify_user(username, password)
-                url = "http://localhost:8001/autheticate_user"
+                url = login_endpoint
                 data = {
                     # 'email': email,
                     "un": username,
