@@ -79,7 +79,10 @@ headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
 
 if st.session_state.authenticated == True:
     max_triggers = config['plans'][f"{st.session_state.user_plan}"]
+    user_triggers = check_user_usage_limit_within_lasthour(st.session_state.active_user, get_goes_url_url)
 # st.markdown(f"maxtriggers:-------{max_triggers}")
+
+
 
 
 def extract_values_from_df(df, key, value, col):
@@ -191,6 +194,7 @@ def goes_enabled():
         write_user_api_usage(st.session_state.active_user,get_goes_files_url,"success")
         write_api_success_or_failure_logs("api_success_logs", st.session_state.active_user, get_goes_files_url,
                                           "success", response.status_code)
+        st.info(f"You are left with {max_triggers - user_triggers} API triggers")
 
     else:
         st.error("Please select all fields")
@@ -212,7 +216,7 @@ def goes_enabled():
     get_url_btn = st.button("Get Url")
     my_s3_file_url = ""
 
-    user_triggers = check_user_usage_limit_within_lasthour(st.session_state.active_user, get_goes_url_url)
+    # user_triggers = check_user_usage_limit_within_lasthour(st.session_state.active_user, get_goes_url_url)
 
     #using user inputs
     if get_url_btn:

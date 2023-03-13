@@ -30,7 +30,7 @@ def check_user_usage_limit_within_lasthour(username, endpoint):
 
         # Apply the function to each row in the dataframe and store the result in a new column
         df['unique_endpoints_last_hour'] = df.apply(count_unique_endpoints, axis=1)
-        st.dataframe(df)
+        # st.dataframe(df)
 
         df = df.sort_values(by='timestamp', ascending=False)
 

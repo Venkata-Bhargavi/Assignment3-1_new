@@ -4,6 +4,7 @@ import boto3
 import os
 from dotenv import load_dotenv
 import streamlit as st
+from pytz import timezone
 
 load_dotenv()
 client_logs = boto3.client('logs',region_name="us-east-1",
@@ -20,8 +21,9 @@ def fetch_register_logs_for_5_days():
     response = client_logs.get_log_events(
         logGroupName='data_explorer',  # Replace with your log group name
         logStreamName="register_user_logs",
-        startTime=start_time,
-        endTime=end_time
+        startFromHead=True,
+        # startTime=start_time,
+        # endTime=end_time
     )
 
 
@@ -36,6 +38,10 @@ def fetch_register_logs_for_5_days():
     # Split each message into its components and store them in a DataFrame
     df = pd.DataFrame([m.split('///') for m in messages], columns=['email', 'username', 'password', 'plan'])
     df['timestamp'] = pd.to_datetime(timestamps, unit='ms')
+    est_tz = timezone('US/Eastern')
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(est_tz).dt.strftime(
+        '%Y-%m-%d %H:%M:%S')
+
     return df
 
 def fetch_api_usage_logs_for_5_days():
@@ -47,8 +53,9 @@ def fetch_api_usage_logs_for_5_days():
     response = client_logs.get_log_events(
         logGroupName='data_explorer',  # Replace with your log group name
         logStreamName="user_api_usage",
-        startTime=start_time,
-        endTime=end_time
+        startFromHead=True,
+        # startTime=start_time,
+        # endTime=end_time
     )
 
     timestamps = []
@@ -60,6 +67,10 @@ def fetch_api_usage_logs_for_5_days():
     # Split each message into its components and store them in a DataFrame
     df = pd.DataFrame([m.split('///') for m in messages], columns=['username', 'endpoint', 'status'])
     df['timestamp'] = pd.to_datetime(timestamps, unit='ms')
+    est_tz = timezone('US/Eastern')
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(est_tz).dt.strftime(
+        '%Y-%m-%d %H:%M:%S')
+
     return df
 
 def fetch_logs_for_5_days():
@@ -71,13 +82,8 @@ def fetch_logs_for_5_days():
     response = client_logs.get_log_events(
         logGroupName='data_explorer',  # Replace with your log group name
         logStreamName="loggedin_user_logs",
-        startTime=start_time,
-        endTime=end_time
+        startFromHead=True,
     )
-    #
-    # # Print each log message
-    # for event in response['events']:
-    #     print(event['message'])
 
 
     # Extract the timestamp and message from each log event
@@ -90,6 +96,10 @@ def fetch_logs_for_5_days():
     # Split each message into its components and store them in a DataFrame
     df = pd.DataFrame([m.split('///') for m in messages], columns=['username', 'endpoint', 'status'])
     df['timestamp'] = pd.to_datetime(timestamps, unit='ms')
+    est_tz = timezone('US/Eastern')
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(est_tz).dt.strftime(
+        '%Y-%m-%d %H:%M:%S')
+
     return df
 
 
@@ -102,8 +112,9 @@ def fetch_api_success_logs_for_5_days():
     response = client_logs.get_log_events(
         logGroupName='data_explorer',  # Replace with your log group name
         logStreamName="api_success_logs",
-        startTime=start_time,
-        endTime=end_time
+        startFromHead=True,
+        # startTime=start_time,
+        # endTime=end_time
     )
     #
     # # Print each log message
@@ -121,6 +132,9 @@ def fetch_api_success_logs_for_5_days():
     # Split each message into its components and store them in a DataFrame
     df = pd.DataFrame([m.split('///') for m in messages], columns=['username', 'endpoint', 'status', 'code'])
     df['timestamp'] = pd.to_datetime(timestamps, unit='ms')
+    # Convert timestamp column to EST timezone
+    est_tz = timezone('US/Eastern')
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(est_tz).dt.strftime('%Y-%m-%d %H:%M:%S')
     return df
 
 
@@ -133,8 +147,10 @@ def fetch_api_failed_logs_for_5_days():
     response = client_logs.get_log_events(
         logGroupName='data_explorer',  # Replace with your log group name
         logStreamName="api_failure_logs",
-        startTime=start_time,
-        endTime=end_time
+        startFromHead=True,
+
+        # startTime=start_time,
+        # endTime=end_time
     )
     #
     # # Print each log message
@@ -151,6 +167,9 @@ def fetch_api_failed_logs_for_5_days():
     # Split each message into its components and store them in a DataFrame
     df = pd.DataFrame([m.split('///') for m in messages], columns=['username', 'endpoint', 'status', 'code'])
     df['timestamp'] = pd.to_datetime(timestamps, unit='ms')
+    est_tz = timezone('US/Eastern')
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(est_tz).dt.strftime(
+        '%Y-%m-%d %H:%M:%S')
     return df
 
 def write_user_api_usage (username,endpoint,status):
@@ -207,6 +226,7 @@ def read_user_api_usage_logs():
     response = client_logs.get_log_events(
         logGroupName=log_group_name,
         logStreamName=log_stream_name,
+        startFromHead=True,
     )
 
 
@@ -220,6 +240,10 @@ def read_user_api_usage_logs():
     # Split each message into its components and store them in a DataFrame
     df = pd.DataFrame([m.split('///') for m in messages], columns=['username', 'endpoint', 'status'])
     df['timestamp'] = pd.to_datetime(timestamps, unit='ms')
+    est_tz = timezone('US/Eastern')
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(est_tz).dt.strftime(
+        '%Y-%m-%d %H:%M:%S')
+
     return df
 
 
@@ -236,6 +260,8 @@ def read_register_user_logs():
     response = client_logs.get_log_events(
         logGroupName=log_group_name,
         logStreamName=log_stream_name,
+        startFromHead=True,
+
     )
 
     # Extract the timestamp and message from each log event
@@ -248,6 +274,10 @@ def read_register_user_logs():
     # Split each message into its components and store them in a DataFrame
     df = pd.DataFrame([m.split('///') for m in messages], columns=['email', 'username', 'password','plan'])
     df['timestamp'] = pd.to_datetime(timestamps, unit='ms')
+    est_tz = timezone('US/Eastern')
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(est_tz).dt.strftime(
+        '%Y-%m-%d %H:%M:%S')
+
     return df
 
 

@@ -6,9 +6,11 @@ import requests
 
 from api_main import check_username_doesnot_exists
 
+
 import altair as alt
 from cloudwatch.logs import *
 from datetime import datetime, timedelta
+import plotly.express as px
 
 # import components.authenticate as authenticate
 
@@ -56,6 +58,8 @@ valid_user_flag = False
 df = read_user_api_usage_logs()
 df['date'] = pd.to_datetime(df['timestamp']).dt.date
 
+# st.dataframe(df)
+
 def total_req_by_user(user):
     user_df = df[df.username == user].copy()
     # group by username and date, and count the number of requests
@@ -68,30 +72,37 @@ def total_req_by_user(user):
     # user_df1 = user_df.groupby('date')['endpoint'].count().reset_index(name='count')
 
     # user_df.date.value_counts()
+    st.info(f"Total Requests by Date for user - {user}: {df[df.username == user].shape[0]}")
 
-    vc = df[df.username == user]['date'].value_counts()
+    if df[df.username == user].shape[0] >0:
+        vc = df[df.username == user]['date'].value_counts()
 
-    # convert the value counts to a dataframe
-    df_vc = vc.to_frame().reset_index()
+        # convert the value counts to a dataframe
+        df_vc = vc.to_frame().reset_index()
 
-    # rename the columns
-    df_vc.columns = ['date', 'count']
+        # rename the columns
+        df_vc.columns = ['date', 'count']
 
-    # create an Altair line chart
-    # chart = alt.Chart(user_df1).mark_bar().encode(
-    #     x='date',
-    #     y='count'
-    # )
+        # create an Altair line chart
+        # chart = alt.Chart(user_df1).mark_bar().encode(
+        #     x='date',
+        #     y='count'
+        # )
 
-    st.info(f"Total Requests by Date for user - {user}")
-    st.markdown("")
-    # display the chart in Streamlit
-    # st.altair_chart(chart)
-    # c1, c2, c3 = st.columns(3)
-    # with c3:
-    #     st.markdown("Total Requests by Date")
-    st.bar_chart(df_vc, x='date', y='count')
-
+        st.markdown("")
+        # display the chart in Streamlit
+        # st.altair_chart(chart)
+        # c1, c2, c3 = st.columns(3)
+        # with c3:
+        #     st.markdown("Total Requests by Date")
+        st.dataframe(df_vc)
+        st.bar_chart(df_vc, x='date', y='count')
+        # data_canada = px.data.gapminder().query("country == 'Canada'")
+        # fig = px.bar(df_vc, x='date', y='count')
+        # # fig.show()
+        # st.plotly_chart(fig)
+    # else:
+    #     st.markdown("No Records Found")
 
 # Total API calls for yesterday
 def total_api_calls_yesterday(user):
@@ -100,7 +111,7 @@ def total_api_calls_yesterday(user):
     yesterday = yesterday.date()
 
     # Filter dataframe to only include data from yesterday
-    df_yesterday = df[(df.username == user) & (df['timestamp'].dt.date == yesterday)].copy()
+    df_yesterday = df[(df.username == user) & (pd.to_datetime(df['timestamp']).dt.date == yesterday)].copy()
     st.markdown("")
     st.info(f"Total API Calls Previous Day: {df_yesterday.shape[0]}")
 
@@ -120,7 +131,7 @@ def total_api_calls_last_week(user):
     start_date = end_date - timedelta(days=7)
 
     # Filter dataframe to only include data from the last week
-    df_last_week = df[(df.username==user) & (df['timestamp'].dt.date >= start_date) & (df['timestamp'].dt.date <= end_date)].copy()
+    df_last_week = df[(df.username==user) & (pd.to_datetime(df['timestamp']).dt.date >= start_date) & (pd.to_datetime(df['timestamp']).dt.date <= end_date)].copy()
     st.markdown("")
     st.info(f"Total API Calls Last Week: {df_last_week.shape[0]}")
 
@@ -213,10 +224,11 @@ def admin_dashboard_home_page_layout(auth_session_state_flag):
 
     # whole_df = fetch_logs_for_5_days()
     api_logs_df = fetch_api_usage_logs_for_5_days()
+    loggedin_logs_df = fetch_logs_for_5_days()
 
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1:
-        user = st.selectbox("Select a User", api_logs_df.username.unique().tolist())
+        user = st.selectbox("Select a User", loggedin_logs_df.username.unique().tolist())
         # user = st.selectbox("Select a User", ['god', 'god1'])
 
     # 1. Chart for Total Request by the user
